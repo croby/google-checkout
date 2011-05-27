@@ -192,7 +192,7 @@ module GoogleCheckout
                   xml.tag!('merchant-item-id', item[:item_id])
                 end
                 if item.key?(:weight)
-                  xml.tag!('item-weight', :unit => "LB", :value => item[:weight])
+                  xml.tag!('item-weight', :unit => "LB", :value => item[:weight].to_f.to_s)
                 end
                 xml.tag!('item-name') {
                   xml.text! item[:name].to_s
@@ -201,7 +201,7 @@ module GoogleCheckout
                   xml.text! item[:description].to_s
                 }
                 xml.tag!('unit-price', :currency => (item[:currency] || 'USD')) {
-                  xml.text! item[:price].to_s
+                  xml.text! Money.new(item[:price].to_f*100, currency).to_s
                 }
                 xml.quantity {
                   xml.text! item[:quantity].to_s
@@ -229,10 +229,17 @@ module GoogleCheckout
               xml.tag!("default-tax-table") {
                 xml.tag!("tax-rules") {
                   xml.tag!("default-tax-rule") {
-                    xml.tag!("shipping-taxed", false)
-                    xml.tag!("rate", "0.00")
+                    xml.tag!("shipping-taxed", true)
                     xml.tag!("tax-area") {
-                      xml.tag!("world-area")
+                      if (@shipping && @shipping[:country_code] == "US")
+                        xml.tag!("us-state-area") {
+                          xml.tag!("state") {
+                            xml.text! @shipping[:region]
+                          }
+                        }
+                      else
+                        xml.tag!("world-area")
+                      end
                     }
                   }
                 }
@@ -255,16 +262,16 @@ module GoogleCheckout
                         xml.text! @shipping[:shipping_type]
                       }
                       xml.tag!('price', :currency => currency) {
-                        xml.text! @shipping[:price]
+                        xml.text! Money.new(@shipping[:price].to_f*100, currency).to_s
                       }
                       if @shipping[:additional_fixed_charge]
                         xml.tag!('additional-fixed-charge', :currency => currency) {
-                          xml.text! @shipping[:additional_fixed_charge]
+                          xml.text! Money.new(@shipping[:additional_fixed_charge].to_f*100, currency).to_s
                         }
                       end
                       if @shipping[:additional_variable_charge_percent]
                         xml.tag!('additional-variable-charge-percent') {
-                          xml.text! @shipping[:additional_variable_charge_percent]
+                          xml.text! @shipping[:additional_variable_charge_percent].to_s
                         }
                       end
                     }
